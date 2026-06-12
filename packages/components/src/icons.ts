@@ -41,6 +41,7 @@ export {
   FiHeadphones,
   FiEdit2,
   FiCheck,
+  FiArrowRight,
 } from 'react-icons/fi';
 
 export type { IconType } from 'react-icons';

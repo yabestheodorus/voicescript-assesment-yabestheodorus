@@ -25,6 +25,17 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   Available: 'success',
   Busy: 'warning',
   Offline: 'neutral',
+  // Indonesian job statuses
+  Baru: 'info',
+  Terjadwal: 'info',
+  Ditugaskan: 'info',
+  Berlangsung: 'brand',
+  Transkripsi: 'warning',
+  Tinjauan: 'warning',
+  Terkirim: 'success',
+  Selesai: 'success',
+  Ditahan: 'neutral',
+  Dibatalkan: 'danger',
 };
 
 export function StatusBadge({ status }: { status: string }) {

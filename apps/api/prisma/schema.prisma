@@ -11,3 +11,90 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum WorkingMode {
+  physical
+  remote
+}
+
+enum JobStatus {
+  NEW
+  ASSIGNED
+  TRANSCRIBED
+  REVIEWED
+  COMPLETED
+}
+
+model Reporters {
+  id            String      @id @default(uuid())
+  name          String      @db.VarChar(100)
+  location      String      @db.VarChar(100)
+  workMode      WorkingMode @default(remote)
+  isAvailable   Boolean     @default(true)
+  ratePerMinute Int
+  currentJobId  String?     @unique
+  currentJob    Job?        @relation("ReporterCurrentJob", fields: [currentJobId], references: [id])
+  jobs          Job[]       @relation("ReporterJobs")
+  payments      Payment[]
+}
+
+model Editor {
+  id           String  @id @default(uuid())
+  name         String  @db.VarChar(100)
+  isAvailable  Boolean @default(true)
+  flatFee      Int
+  currentJobId String? @unique
+
+  currentJob Job?      @relation("EditorCurrentJob", fields: [currentJobId], references: [id])
+  jobs       Job[]     @relation("EditorJobs")
+  payments   Payment[]
+}
+
+model Job {
+  id         String      @id @default(uuid())
+  caseNumber String      @unique @db.VarChar(100)
+  caseName   String      @db.VarChar(255)
+  duration   Int         @default(0)
+  location   WorkingMode
+  city       String?     @db.VarChar(100)
+  status     JobStatus   @default(NEW)
+
+  createdAt              DateTime  @default(now())
+  assignedAt             DateTime?
+  transcribedAt          DateTime?
+  reviewAssignedAt       DateTime?
+  reviewedAt             DateTime?
+  completedAt            DateTime?
+  transcribeJobStartedAt DateTime?
+  reviewJobStartedAt     DateTime?
+
+  reporterId String?
+  editorId   String?
+
+  reporter Reporters? @relation("ReporterJobs", fields: [reporterId], references: [id])
+  editor   Editor?    @relation("EditorJobs", fields: [editorId], references: [id])
+
+  currentReporter Reporters? @relation("ReporterCurrentJob")
+  currentEditor   Editor?    @relation("EditorCurrentJob")
+
+  payment Payment?
+
+  @@index([status])
+  @@index([reporterId])
+  @@index([editorId])
+}
+
+model Payment {
+  id                      String @id @default(uuid())
+  jobId                   String @unique
+  reporterId              String
+  editorId                String
+  transcribePaymentAmount Int
+  reviewPaymentAmount     Int
+  totalPayout             Int
+  transcribeDuration      Int
+
+  job      Job       @relation(fields: [jobId], references: [id])
+  reporter Reporters @relation(fields: [reporterId], references: [id])
+  editor   Editor    @relation(fields: [editorId], references: [id])
+}

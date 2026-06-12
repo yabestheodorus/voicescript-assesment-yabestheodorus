@@ -11,6 +11,9 @@
     "jest.config.ts"
   ],
   "compilerOptions": {
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
   }
 }

@@ -1,4 +1,8 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import type { JobStatus } from '@repo/schema';
+import { getJob } from '../../../lib/api';
+import { SetJobBreadcrumb } from '@repo/components/layout/breadcrumb-store';
 import { Card, CardHeader, CardBody } from '@repo/components/ui/card';
 import { StatusBadge } from '@repo/components/ui/status-badge';
 import { Avatar } from '@repo/components/ui/avatar';
@@ -16,6 +20,18 @@ import {
   FiMic,
   FiDollarSign,
 } from '@repo/components/icons';
+
+// Always reflect the live database for this detail view.
+export const dynamic = 'force-dynamic';
+
+/** Map the DB job status to a human-readable label the StatusBadge styles. */
+const STATUS_LABELS: Record<JobStatus, string> = {
+  NEW: 'Scheduled',
+  ASSIGNED: 'In Progress',
+  TRANSCRIBED: 'Transcribing',
+  REVIEWED: 'Review',
+  COMPLETED: 'Completed',
+};
 
 const TIMELINE = [
   { label: 'Job created', time: 'Jun 8, 2026 · 10:14 AM', done: true },
@@ -61,9 +77,17 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const result = await getJob(id);
+  if (!result.ok) {
+    notFound();
+  }
+  const job = result.data;
 
   return (
     <div className="space-y-6">
+      {/* Show the job's case number (not its UUID) in the header breadcrumb. */}
+      <SetJobBreadcrumb title={job.caseNumber} />
+
       {/* Back + header */}
       <div>
         <Link
@@ -79,12 +103,13 @@ export default async function JobDetailPage({
         <div>
           <div className="flex items-center gap-3">
             <h1 className="font-heading text-2xl font-bold tracking-tight text-surface-900">
-              Hartwell v. Northgate Ins.
+              {job.caseName}
             </h1>
-            <StatusBadge status="In Progress" />
+            <StatusBadge status={STATUS_LABELS[job.status]} />
           </div>
           <p className="mt-1 text-sm text-surface-500">
-            {id} · Deposition · Bennett &amp; Cole LLP
+            {job.caseNumber} · <span className="capitalize">{job.location}</span>
+            {job.city ? ` · ${job.city}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">

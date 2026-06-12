@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: voicescript-postgres
+    restart: unless-stopped
+    # Credentials match apps/api/.env DATABASE_URL:
+    # postgresql://sysadmin:randompassword@localhost:5432/voicescript
+    environment:
+      POSTGRES_USER: sysadmin
+      POSTGRES_PASSWORD: randompassword
+      POSTGRES_DB: voicescript
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sysadmin -d voicescript']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: voicescript-postgres-data

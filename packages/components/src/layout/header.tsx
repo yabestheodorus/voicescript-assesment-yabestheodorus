@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Avatar } from '../ui/avatar';
+import { useBreadcrumbStore } from './breadcrumb-store';
 import {
   FiSearch,
   FiBell,
@@ -17,11 +18,12 @@ import {
 const SEGMENT_LABELS: Record<string, string> = {
   '': 'Dashboard',
   jobs: 'Jobs',
+  new: 'Create Jobs',
   reporters: 'Reporters',
   payments: 'Payments',
 };
 
-function buildCrumbs(pathname: string) {
+function buildCrumbs(pathname: string, jobDetail: string) {
   const segments = pathname.split('/').filter(Boolean);
   const crumbs = [{ label: 'Dashboard', href: '/' }];
   let href = '';
@@ -32,13 +34,18 @@ function buildCrumbs(pathname: string) {
       href,
     });
   }
+  // On a job-detail route (/jobs/:id), show the case number instead of the UUID.
+  if (jobDetail && segments[0] === 'jobs' && segments.length === 2) {
+    crumbs[crumbs.length - 1]!.label = jobDetail;
+  }
   return crumbs;
 }
 
 export function Header() {
   const pathname = usePathname();
+  const jobDetail = useBreadcrumbStore((s) => s.jobDetail);
   const [menuOpen, setMenuOpen] = useState(false);
-  const crumbs = buildCrumbs(pathname);
+  const crumbs = buildCrumbs(pathname, jobDetail);
   const title = crumbs[crumbs.length - 1]?.label ?? 'Dashboard';
 
   return (
