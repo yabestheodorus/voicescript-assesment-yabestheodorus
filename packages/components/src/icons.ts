@@ -1,0 +1,46 @@
+/**
+ * Single import surface for the icon set used across the dashboard.
+ * Icons come from `react-icons` (Feather set) — no custom SVGs.
+ */
+export {
+  FiGrid,
+  FiBriefcase,
+  FiUsers,
+  FiCreditCard,
+  FiSearch,
+  FiBell,
+  FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronsLeft,
+  FiMenu,
+  FiClock,
+  FiCheckCircle,
+  FiXCircle,
+  FiAlertCircle,
+  FiFileText,
+  FiCalendar,
+  FiMapPin,
+  FiMic,
+  FiDownload,
+  FiMoreVertical,
+  FiTrendingUp,
+  FiTrendingDown,
+  FiPlus,
+  FiFilter,
+  FiArrowLeft,
+  FiArrowUpRight,
+  FiMail,
+  FiPhone,
+  FiStar,
+  FiDollarSign,
+  FiActivity,
+  FiLogOut,
+  FiSettings,
+  FiUser,
+  FiHeadphones,
+  FiEdit2,
+  FiCheck,
+} from 'react-icons/fi';
+
+export type { IconType } from 'react-icons';

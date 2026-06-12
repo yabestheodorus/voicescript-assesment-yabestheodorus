@@ -1,3 +1,3 @@
-export { Link } from './links/entities/link.entity';
-export { CreateLinkDto } from './links/dto/create-link.dto';
-export { UpdateLinkDto } from './links/dto/update-link.dto';
+// Shared API contracts (entities, DTOs, schemas) are exported from here
+// and consumed by both apps/api (NestJS) and apps/web (Next.js).
+export {};

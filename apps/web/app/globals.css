@@ -1,13 +1,63 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import 'tailwindcss';
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Scan the shared components package so Tailwind generates its classes (Tailwind v4) */
+@source '../../../packages/components/src/**/*.{ts,tsx}';
+
+/*
+ * VoiceScript design system — Tailwind v4 theme.
+ * Brand color sampled from the official logo: #2F5D87 (steel navy).
+ * Fonts wired via next/font CSS variables in app/layout.tsx.
+ */
+@theme {
+  /* Typography */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-jakarta), var(--font-inter), ui-sans-serif, sans-serif;
+
+  /* Brand / primary — navy scale built around the logo's #2F5D87 */
+  --color-brand-50: #f1f6fb;
+  --color-brand-100: #dde9f4;
+  --color-brand-200: #c2d6ec;
+  --color-brand-300: #97b8db;
+  --color-brand-400: #6692c4;
+  --color-brand-500: #4373ab;
+  --color-brand-600: #2f5d87;
+  --color-brand-700: #284e72;
+  --color-brand-800: #25425e;
+  --color-brand-900: #233a50;
+  --color-brand-950: #172536;
+
+  /* Neutral surface scale (cool-tinted slate) */
+  --color-surface-0: #ffffff;
+  --color-surface-50: #f7f9fc;
+  --color-surface-100: #eef2f7;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+
+  /* Semantic status accents */
+  --color-success-50: #ecfdf5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --color-info-50: #eff6ff;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
 }
 
 html,
@@ -17,34 +67,18 @@ body {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  background-color: var(--color-surface-50);
+  color: var(--color-surface-800);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.imgDark {
-  display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-
-  .imgLight {
-    display: none;
-  }
-  .imgDark {
-    display: unset;
-  }
+/* Headings default to the display font */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
 }

@@ -7,13 +7,18 @@
     "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": false,
     "incremental": true,
-    "module": "commonjs",
-    "moduleResolution": "Node10",
+     "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2023",
+    "strict": true,
+    "esModuleInterop": true,
+    "ignoreDeprecations": "6.0",
     "noFallthroughCasesInSwitch": false,
     "noImplicitAny": false,
     "removeComments": true,
     "sourceMap": true,
     "strictNullChecks": false,
+    "strictPropertyInitialization": false,
     "strictBindCallApply": false
   }
 }
