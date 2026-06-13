@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { PageHeader } from '@repo/components/ui/page-header';
-import { StatusBadge } from '@repo/components/ui/status-badge';
+import { Badge } from '@repo/components/ui/badge';
 import { Card, CardBody } from '@repo/components/ui/card';
 import { buttonClasses } from '@repo/components/ui/button';
 import {
@@ -19,22 +19,14 @@ import {
   FiAlertCircle,
   FiBriefcase,
 } from '@repo/components/icons';
-import type { Job, JobStatus } from '@repo/schema';
+import type { Job } from '@repo/schema';
 import { getJobs } from '../../lib/api';
+import { jobStatusDisplay } from '../../lib/job-status';
 
 // Always render fresh data from the database on each request.
 export const dynamic = 'force-dynamic';
 
 const FILTERS = ['Semua', 'Terjadwal', 'Berlangsung', 'Transkripsi', 'Tinjauan', 'Terkirim'];
-
-/** Map the DB job status to a human-readable label the StatusBadge styles. */
-const STATUS_LABELS: Record<JobStatus, string> = {
-  NEW: 'Scheduled',
-  ASSIGNED: 'In Progress',
-  TRANSCRIBED: 'Transcribing',
-  REVIEWED: 'Review',
-  COMPLETED: 'Completed',
-};
 
 function formatDate(value: Date) {
   return value.toLocaleDateString('en-GB', {
@@ -45,6 +37,7 @@ function formatDate(value: Date) {
 }
 
 function JobRow({ job }: { job: Job }) {
+  const status = jobStatusDisplay(job);
   return (
     <TR>
       <TD>
@@ -66,7 +59,9 @@ function JobRow({ job }: { job: Job }) {
         {job.duration ? `${job.duration} min` : '—'}
       </TD>
       <TD>
-        <StatusBadge status={STATUS_LABELS[job.status]} />
+        <Badge tone={status.tone} dot>
+          {status.label}
+        </Badge>
       </TD>
       <TD className="text-right">
         <Link

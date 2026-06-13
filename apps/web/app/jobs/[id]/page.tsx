@@ -1,10 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { JobStatus, JobDetail, Reporter } from '@repo/schema';
-import { getJob, getReporters } from '../../../lib/api';
+import type { JobDetail, Reporter, Editor } from '@repo/schema';
+import { getJob, getReporters, getEditors } from '../../../lib/api';
+import { jobStatusDisplay } from '../../../lib/job-status';
 import { SetJobBreadcrumb } from '@repo/components/layout/breadcrumb-store';
 import { AssignReporterDialog } from './assign-reporter-dialog';
+import { AssignEditorDialog } from './assign-editor-dialog';
+import { StartTranscribeButton } from './start-transcribe-button';
 import { FinishTranscribeButton } from './finish-transcribe-button';
+import { FinishReviewButton } from './finish-review-button';
+import { PayButton } from './pay-button';
 import { Card, CardHeader, CardBody } from '@repo/components/ui/card';
 import { StatusBadge } from '@repo/components/ui/status-badge';
 import { Avatar } from '@repo/components/ui/avatar';
@@ -25,14 +30,6 @@ import {
 
 // Always reflect the live database for this detail view.
 export const dynamic = 'force-dynamic';
-
-const STATUS_LABELS: Record<JobStatus, string> = {
-  NEW: 'Scheduled',
-  ASSIGNED: 'In Progress',
-  TRANSCRIBED: 'Transcribing',
-  REVIEWED: 'Review',
-  COMPLETED: 'Completed',
-};
 
 const FILES = [
   { name: 'Audio recording.wav', kind: 'Audio' },
@@ -57,9 +54,11 @@ function formatRupiah(amount: number) {
 function JobActionButton({
   job,
   reporters,
+  editors,
 }: {
   job: JobDetail;
   reporters: Reporter[];
+  editors: Editor[];
 }) {
   switch (job.status) {
     case 'NEW':
@@ -72,7 +71,8 @@ function JobActionButton({
         />
       );
     case 'ASSIGNED':
-      return (
+      // The reporter starts transcribing first; only then can they finish.
+      return job.transcribeJobStartedAt ? (
         <>
           <button disabled className={buttonClasses('secondary')}>
             <FiClock className="size-4" />
@@ -80,27 +80,25 @@ function JobActionButton({
           </button>
           <FinishTranscribeButton jobId={job.id} />
         </>
+      ) : (
+        <StartTranscribeButton jobId={job.id} />
       );
     case 'TRANSCRIBED':
       // Once an editor is assigned, the transcript is under review.
       return job.editorId ? (
-        <button disabled className={buttonClasses('secondary')}>
-          <FiClock className="size-4" />
-          Is being reviewed
-        </button>
+        <>
+          <button disabled className={buttonClasses('secondary')}>
+            <FiClock className="size-4" />
+            Is being reviewed
+          </button>
+          <FinishReviewButton jobId={job.id} />
+        </>
       ) : (
-        <button className={buttonClasses('primary')}>
-          <FiEdit2 className="size-4" />
-          Assign to editor
-        </button>
+        <AssignEditorDialog jobId={job.id} editors={editors} />
       );
     case 'REVIEWED':
-      return (
-        <button className={buttonClasses('primary')}>
-          <FiDollarSign className="size-4" />
-          Calculate payments
-        </button>
-      );
+      // Payment was calculated at finish-review; settle it to complete the job.
+      return <PayButton jobId={job.id} />;
     case 'COMPLETED':
       return (
         <button disabled className={buttonClasses('secondary')}>
@@ -144,12 +142,17 @@ export default async function JobDetailPage({
     notFound();
   }
   const job = result.data;
-  const { reporter, payment } = job;
+  const { reporter, editor, payment } = job;
 
-  // Reporter roster for the assign dialog (only used while the job is NEW).
-  const reportersResult = await getReporters();
+  // Reporter / editor rosters for the assign dialogs.
+  const [reportersResult, editorsResult] = await Promise.all([
+    getReporters(),
+    getEditors(),
+  ]);
   const reporters = reportersResult.ok ? reportersResult.data : [];
+  const editors = editorsResult.ok ? editorsResult.data : [];
 
+  const status = jobStatusDisplay(job);
 
   const milestones = [
     { label: 'Job created', at: job.createdAt },
@@ -181,7 +184,9 @@ export default async function JobDetailPage({
             <h1 className="font-heading text-2xl font-bold tracking-tight text-surface-900">
               {job.caseName}
             </h1>
-            <StatusBadge status={STATUS_LABELS[job.status]} />
+            <Badge tone={status.tone} dot>
+              {status.label}
+            </Badge>
           </div>
           <p className="mt-1 text-sm text-surface-500">
             {job.caseNumber} · <span className="capitalize">{job.location}</span>
@@ -193,7 +198,7 @@ export default async function JobDetailPage({
             <FiEdit2 className="size-4" />
             Edit
           </button>
-          <JobActionButton job={job} reporters={reporters} />
+          <JobActionButton job={job} reporters={reporters} editors={editors} />
         </div>
       </div>
 
@@ -309,6 +314,34 @@ export default async function JobDetailPage({
           </Card>
 
           <Card>
+            <CardHeader title="Assigned editor" />
+            <CardBody>
+              {editor ? (
+                <div className="flex items-center gap-3">
+                  <Avatar name={editor.name} size="lg" />
+                  <div>
+                    <p className="font-semibold text-surface-800">
+                      {editor.name}
+                    </p>
+                    <p className="text-sm text-surface-500">
+                      {formatRupiah(editor.flatFee)} flat fee
+                    </p>
+                    <div className="mt-1">
+                      <StatusBadge
+                        status={editor.isAvailable ? 'Available' : 'Busy'}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-surface-500">
+                  No editor assigned yet.
+                </p>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
             <CardHeader title="Progress" />
             <CardBody>
               <ol className="relative space-y-5 before:absolute before:left-2.75 before:top-1 before:h-[calc(100%-1rem)] before:w-px before:bg-surface-200">
@@ -375,7 +408,7 @@ export default async function JobDetailPage({
                 </>
               ) : (
                 <p className="text-surface-500">
-                  Payment is generated once the job is completed.
+                  Payment is generated once the review is completed.
                 </p>
               )}
             </CardBody>

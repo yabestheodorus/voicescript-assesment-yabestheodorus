@@ -4,9 +4,11 @@
  */
 import {
   reporterSchema,
+  editorSchema,
   jobSchema,
   jobDetailSchema,
   type Reporter,
+  type Editor,
   type Job,
   type JobDetail,
   type CreateJobInput,
@@ -41,6 +43,28 @@ export async function getReporters(): Promise<ApiResult<Reporter[]>> {
     const parsed = reporterSchema.array().safeParse(await res.json());
     if (!parsed.success) {
       return { ok: false, error: 'Unexpected response shape from /reporters' };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+export async function getEditors(): Promise<ApiResult<Editor[]>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/editors`, {
+      // Always reflect the live database for this dashboard view.
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      return { ok: false, error: `API responded ${res.status}` };
+    }
+    const parsed = editorSchema.array().safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: 'Unexpected response shape from /editors' };
     }
     return { ok: true, data: parsed.data };
   } catch {
@@ -156,6 +180,39 @@ export async function assignReporter(
   }
 }
 
+/** POST /jobs/:id/start-transcribe — called from the browser (client component). */
+export async function startTranscribe(jobId: string): Promise<ApiResult<Job>> {
+  try {
+    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/start-transcribe`, {
+      method: 'POST',
+    });
+
+    if (!res.ok) {
+      let error = `API responded ${res.status}`;
+      try {
+        const payload = await res.json();
+        if (typeof payload?.message === 'string') {
+          error = payload.message;
+        }
+      } catch {
+        // Non-JSON error body — keep the status-based message.
+      }
+      return { ok: false, error };
+    }
+
+    const parsed = jobSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: 'Unexpected response shape from start-transcribe' };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
 /** POST /jobs/:id/finish-transcribe — called from the browser (client component). */
 export async function finishTranscribe(
   jobId: string,
@@ -184,6 +241,116 @@ export async function finishTranscribe(
     const parsed = jobSchema.safeParse(await res.json());
     if (!parsed.success) {
       return { ok: false, error: 'Unexpected response shape from finish-transcribe' };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+/** POST /jobs/:id/assign-editor — called from the browser (client component). */
+export async function assignEditor(
+  jobId: string,
+  editorId: string,
+): Promise<ApiResult<Job>> {
+  try {
+    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/assign-editor`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ editorId }),
+    });
+
+    if (!res.ok) {
+      let error = `API responded ${res.status}`;
+      try {
+        const payload = await res.json();
+        if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+          error = payload.errors
+            .map((e: { path: string; message: string }) =>
+              e.path ? `${e.path}: ${e.message}` : e.message,
+            )
+            .join(', ');
+        } else if (typeof payload?.message === 'string') {
+          error = payload.message;
+        }
+      } catch {
+        // Non-JSON error body — keep the status-based message.
+      }
+      return { ok: false, error };
+    }
+
+    const parsed = jobSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: 'Unexpected response shape from assign-editor' };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+/** POST /jobs/:id/finish-review — called from the browser (client component). */
+export async function finishReview(jobId: string): Promise<ApiResult<Job>> {
+  try {
+    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/finish-review`, {
+      method: 'POST',
+    });
+
+    if (!res.ok) {
+      let error = `API responded ${res.status}`;
+      try {
+        const payload = await res.json();
+        if (typeof payload?.message === 'string') {
+          error = payload.message;
+        }
+      } catch {
+        // Non-JSON error body — keep the status-based message.
+      }
+      return { ok: false, error };
+    }
+
+    const parsed = jobSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: 'Unexpected response shape from finish-review' };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+/** POST /jobs/:id/pay — marks a reviewed job as done. Called from the browser. */
+export async function payJob(jobId: string): Promise<ApiResult<Job>> {
+  try {
+    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/pay`, {
+      method: 'POST',
+    });
+
+    if (!res.ok) {
+      let error = `API responded ${res.status}`;
+      try {
+        const payload = await res.json();
+        if (typeof payload?.message === 'string') {
+          error = payload.message;
+        }
+      } catch {
+        // Non-JSON error body — keep the status-based message.
+      }
+      return { ok: false, error };
+    }
+
+    const parsed = jobSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: 'Unexpected response shape from pay' };
     }
     return { ok: true, data: parsed.data };
   } catch {

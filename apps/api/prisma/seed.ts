@@ -29,6 +29,21 @@ const REPORTERS = [
   { name: 'Sari Wulandari', location: 'Padang', workMode: 'remote' as const, isAvailable: true, ratePerMinute: 1900 },
 ];
 
+/**
+ * Editors review transcripts remotely (no location) and are paid a flat fee
+ * per job (in IDR). All start available.
+ */
+const EDITORS = [
+  { name: 'Clara Wijaya', isAvailable: true, flatFee: 150000 },
+  { name: 'Daniel Tanu', isAvailable: true, flatFee: 175000 },
+  { name: 'Erika Halim', isAvailable: true, flatFee: 140000 },
+  { name: 'Gilang Pradana', isAvailable: true, flatFee: 160000 },
+  { name: 'Hana Kusuma', isAvailable: true, flatFee: 185000 },
+  { name: 'Irfan Maulana', isAvailable: true, flatFee: 155000 },
+  { name: 'Jessica Tanjung', isAvailable: true, flatFee: 170000 },
+  { name: 'Kevin Susanto', isAvailable: true, flatFee: 145000 },
+];
+
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -40,12 +55,20 @@ async function main() {
 
   try {
     // Clear the reporters table before seeding.
-    const { count: removed } = await prisma.reporters.deleteMany();
-    console.log(`Cleared ${removed} existing reporter(s).`);
+    const { count: removedReporters } = await prisma.reporters.deleteMany();
+    console.log(`Cleared ${removedReporters} existing reporter(s).`);
 
     await prisma.reporters.createMany({ data: REPORTERS });
-    const total = await prisma.reporters.count();
-    console.log(`Seeded ${total} Indonesian reporter(s).`);
+    const totalReporters = await prisma.reporters.count();
+    console.log(`Seeded ${totalReporters} Indonesian reporter(s).`);
+
+    // Clear the editors table before seeding.
+    const { count: removedEditors } = await prisma.editor.deleteMany();
+    console.log(`Cleared ${removedEditors} existing editor(s).`);
+
+    await prisma.editor.createMany({ data: EDITORS });
+    const totalEditors = await prisma.editor.count();
+    console.log(`Seeded ${totalEditors} editor(s).`);
   } finally {
     await prisma.$disconnect();
   }

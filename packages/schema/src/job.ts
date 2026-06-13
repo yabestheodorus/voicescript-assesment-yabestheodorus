@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { workingModeSchema, jobStatusSchema } from './enums';
 import { uuidSchema } from './common';
 import { reporterSchema } from './reporter';
+import { editorSchema } from './editor';
 import { paymentSchema } from './payment';
 
 /** Full job entity (DB row shape). Timestamps accept ISO strings or Dates. */
@@ -27,11 +28,13 @@ export const jobSchema = z.object({
 export type Job = z.infer<typeof jobSchema>;
 
 /**
- * GET /jobs/:id response — the job plus its assigned reporter and payment
- * snapshot (both null until assigned / completed). Used by the detail page.
+ * GET /jobs/:id response — the job plus its assigned reporter, editor, and
+ * payment snapshot (all null until assigned / completed). Used by the detail
+ * page. Reporter/editor persist via the job's FK even after they're freed.
  */
 export const jobDetailSchema = jobSchema.extend({
   reporter: reporterSchema.nullable(),
+  editor: editorSchema.nullable(),
   payment: paymentSchema.nullable(),
 });
 export type JobDetail = z.infer<typeof jobDetailSchema>;
