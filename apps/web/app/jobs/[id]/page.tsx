@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { JobStatus } from '@repo/schema';
-import { getJob } from '../../../lib/api';
+import type { JobStatus, JobDetail, Reporter } from '@repo/schema';
+import { getJob, getReporters } from '../../../lib/api';
 import { SetJobBreadcrumb } from '@repo/components/layout/breadcrumb-store';
+import { AssignReporterDialog } from './assign-reporter-dialog';
+import { FinishTranscribeButton } from './finish-transcribe-button';
 import { Card, CardHeader, CardBody } from '@repo/components/ui/card';
 import { StatusBadge } from '@repo/components/ui/status-badge';
 import { Avatar } from '@repo/components/ui/avatar';
@@ -24,7 +26,6 @@ import {
 // Always reflect the live database for this detail view.
 export const dynamic = 'force-dynamic';
 
-/** Map the DB job status to a human-readable label the StatusBadge styles. */
 const STATUS_LABELS: Record<JobStatus, string> = {
   NEW: 'Scheduled',
   ASSIGNED: 'In Progress',
@@ -33,21 +34,82 @@ const STATUS_LABELS: Record<JobStatus, string> = {
   COMPLETED: 'Completed',
 };
 
-const TIMELINE = [
-  { label: 'Job created', time: 'Jun 8, 2026 · 10:14 AM', done: true },
-  { label: 'Reporter assigned', time: 'Jun 8, 2026 · 11:02 AM', done: true },
-  { label: 'Proceeding recorded', time: 'Jun 12, 2026 · 02:40 PM', done: true },
-  { label: 'Transcription in progress', time: 'Started Jun 12, 2026', done: false, current: true },
-  { label: 'Quality review', time: 'Pending', done: false },
-  { label: 'Delivered to client', time: 'Est. Jun 15, 2026', done: false },
+const FILES = [
+  { name: 'Audio recording.wav', kind: 'Audio' },
+  { name: 'Rough draft transcript.txt', kind: 'Draft' },
 ];
 
-const FILES = [
-  { name: 'Audio recording — Session 1.wav', size: '412 MB', kind: 'Audio' },
-  { name: 'Exhibit A — Contract.pdf', size: '1.2 MB', kind: 'Exhibit' },
-  { name: 'Exhibit B — Email thread.pdf', size: '880 KB', kind: 'Exhibit' },
-  { name: 'Rough draft transcript.txt', size: '64 KB', kind: 'Draft' },
-];
+function formatDateTime(value: Date) {
+  return value.toLocaleString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatRupiah(amount: number) {
+  return `Rp ${amount.toLocaleString('en-US')}`;
+}
+
+
+function JobActionButton({
+  job,
+  reporters,
+}: {
+  job: JobDetail;
+  reporters: Reporter[];
+}) {
+  switch (job.status) {
+    case 'NEW':
+      return (
+        <AssignReporterDialog
+          jobId={job.id}
+          jobCity={job.city}
+          jobLocation={job.location}
+          reporters={reporters}
+        />
+      );
+    case 'ASSIGNED':
+      return (
+        <>
+          <button disabled className={buttonClasses('secondary')}>
+            <FiClock className="size-4" />
+            Is being transcribed
+          </button>
+          <FinishTranscribeButton jobId={job.id} />
+        </>
+      );
+    case 'TRANSCRIBED':
+      // Once an editor is assigned, the transcript is under review.
+      return job.editorId ? (
+        <button disabled className={buttonClasses('secondary')}>
+          <FiClock className="size-4" />
+          Is being reviewed
+        </button>
+      ) : (
+        <button className={buttonClasses('primary')}>
+          <FiEdit2 className="size-4" />
+          Assign to editor
+        </button>
+      );
+    case 'REVIEWED':
+      return (
+        <button className={buttonClasses('primary')}>
+          <FiDollarSign className="size-4" />
+          Calculate payments
+        </button>
+      );
+    case 'COMPLETED':
+      return (
+        <button disabled className={buttonClasses('secondary')}>
+          <FiCheckCircle className="size-4" />
+          Completed
+        </button>
+      );
+  }
+}
 
 function InfoRow({
   icon: Icon,
@@ -82,6 +144,20 @@ export default async function JobDetailPage({
     notFound();
   }
   const job = result.data;
+  const { reporter, payment } = job;
+
+  // Reporter roster for the assign dialog (only used while the job is NEW).
+  const reportersResult = await getReporters();
+  const reporters = reportersResult.ok ? reportersResult.data : [];
+
+
+  const milestones = [
+    { label: 'Job created', at: job.createdAt },
+    { label: 'Reporter assigned', at: job.assignedAt },
+    { label: 'Transcription completed', at: job.transcribedAt },
+    { label: 'Review completed', at: job.reviewedAt },
+    { label: 'Delivered to client', at: job.completedAt },
+  ];
 
   return (
     <div className="space-y-6">
@@ -117,10 +193,7 @@ export default async function JobDetailPage({
             <FiEdit2 className="size-4" />
             Edit
           </button>
-          <button className={buttonClasses('primary')}>
-            <FiDownload className="size-4" />
-            Download transcript
-          </button>
+          <JobActionButton job={job} reporters={reporters} />
         </div>
       </div>
 
@@ -131,12 +204,26 @@ export default async function JobDetailPage({
             <CardHeader title="Proceeding details" />
             <CardBody>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <InfoRow icon={FiCalendar} label="Date & time" value="Jun 12, 2026 · 09:00 AM" />
-                <InfoRow icon={FiMapPin} label="Location" value="Downtown Office · Suite 1200" />
-                <InfoRow icon={FiMic} label="Format" value="In-person · Stenographic" />
-                <InfoRow icon={FiFileText} label="Page count" value="142 pages (rough)" />
-                <InfoRow icon={FiClock} label="Turnaround" value="Standard (3 business days)" />
-                <InfoRow icon={FiCheckCircle} label="Certification" value="Certified copy requested" />
+                <InfoRow
+                  icon={FiCalendar}
+                  label="Date & time"
+                  value={formatDateTime(job.createdAt)}
+                />
+                <InfoRow
+                  icon={FiMapPin}
+                  label="Location"
+                  value={job.city ?? 'Remote'}
+                />
+                <InfoRow
+                  icon={FiMic}
+                  label="Format"
+                  value={job.location === 'physical' ? 'In-person' : 'Remote'}
+                />
+                <InfoRow
+                  icon={FiClock}
+                  label="Duration"
+                  value={job.duration ? `${job.duration} min` : '—'}
+                />
               </div>
             </CardBody>
           </Card>
@@ -144,7 +231,7 @@ export default async function JobDetailPage({
           <Card>
             <CardHeader
               title="Files & exhibits"
-              description="4 attachments"
+              description={`${FILES.length} attachments`}
               action={
                 <button className="text-sm font-medium text-brand-600 hover:text-brand-700">
                   Upload
@@ -165,7 +252,6 @@ export default async function JobDetailPage({
                       <p className="truncate text-sm font-medium text-surface-800">
                         {file.name}
                       </p>
-                      <p className="text-xs text-surface-400">{file.size}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -188,62 +274,72 @@ export default async function JobDetailPage({
           <Card>
             <CardHeader title="Assigned reporter" />
             <CardBody>
-              <div className="flex items-center gap-3">
-                <Avatar name="Maria Solis" size="lg" />
-                <div>
-                  <p className="font-semibold text-surface-800">Maria Solis</p>
-                  <p className="text-sm text-surface-500">
-                    RPR, CRR · 8 yrs experience
-                  </p>
-                  <div className="mt-1">
-                    <StatusBadge status="Busy" />
+              {reporter ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={reporter.name} size="lg" />
+                    <div>
+                      <p className="font-semibold text-surface-800">
+                        {reporter.name}
+                      </p>
+                      <p className="text-sm text-surface-500">
+                        {reporter.location} ·{' '}
+                        {formatRupiah(reporter.ratePerMinute)}/min
+                      </p>
+                      <div className="mt-1">
+                        <StatusBadge
+                          status={reporter.isAvailable ? 'Available' : 'Busy'}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <Link
-                href="/reporters/RPT-104"
-                className={buttonClasses('secondary', 'sm', 'mt-4 w-full')}
-              >
-                View profile
-              </Link>
+                  <Link
+                    href={`/reporters/${reporter.id}`}
+                    className={buttonClasses('secondary', 'sm', 'mt-4 w-full')}
+                  >
+                    View profile
+                  </Link>
+                </>
+              ) : (
+                <p className="text-sm text-surface-500">
+                  No reporter assigned yet.
+                </p>
+              )}
             </CardBody>
           </Card>
 
           <Card>
             <CardHeader title="Progress" />
             <CardBody>
-              <ol className="relative space-y-5 before:absolute before:left-[11px] before:top-1 before:h-[calc(100%-1rem)] before:w-px before:bg-surface-200">
-                {TIMELINE.map((step) => (
-                  <li key={step.label} className="relative flex gap-3">
-                    <span
-                      className={
-                        step.done
-                          ? 'z-10 flex size-6 items-center justify-center rounded-full bg-success-500 text-white'
-                          : step.current
-                            ? 'z-10 flex size-6 items-center justify-center rounded-full bg-brand-600 text-white ring-4 ring-brand-100'
-                            : 'z-10 flex size-6 items-center justify-center rounded-full bg-surface-200 text-surface-400'
-                      }
-                    >
-                      {step.done ? (
-                        <FiCheckCircle className="size-3.5" />
-                      ) : (
-                        <span className="size-2 rounded-full bg-current" />
-                      )}
-                    </span>
-                    <div className="-mt-0.5">
-                      <p
+              <ol className="relative space-y-5 before:absolute before:left-2.75 before:top-1 before:h-[calc(100%-1rem)] before:w-px before:bg-surface-200">
+                {milestones.map((step) => {
+                  const done = Boolean(step.at);
+                  return (
+                    <li key={step.label} className="relative flex gap-3">
+                      <span
                         className={
-                          step.current
-                            ? 'text-sm font-semibold text-surface-900'
-                            : 'text-sm font-medium text-surface-700'
+                          done
+                            ? 'z-10 flex size-6 items-center justify-center rounded-full bg-success-500 text-white'
+                            : 'z-10 flex size-6 items-center justify-center rounded-full bg-surface-200 text-surface-400'
                         }
                       >
-                        {step.label}
-                      </p>
-                      <p className="text-xs text-surface-400">{step.time}</p>
-                    </div>
-                  </li>
-                ))}
+                        {done ? (
+                          <FiCheckCircle className="size-3.5" />
+                        ) : (
+                          <span className="size-2 rounded-full bg-current" />
+                        )}
+                      </span>
+                      <div className="-mt-0.5">
+                        <p className="text-sm font-medium text-surface-700">
+                          {step.label}
+                        </p>
+                        <p className="text-xs text-surface-400">
+                          {step.at ? formatDateTime(step.at) : 'Pending'}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
               </ol>
             </CardBody>
           </Card>
@@ -251,27 +347,37 @@ export default async function JobDetailPage({
           <Card>
             <CardHeader title="Billing" />
             <CardBody className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-surface-500">Original (142 pg)</span>
-                <span className="font-medium text-surface-800">$1,420.00</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-surface-500">Certified copy</span>
-                <span className="font-medium text-surface-800">$284.00</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-surface-500">Exhibits (2)</span>
-                <span className="font-medium text-surface-800">$48.00</span>
-              </div>
-              <div className="flex justify-between border-t border-surface-100 pt-3">
-                <span className="font-semibold text-surface-800">
-                  <FiDollarSign className="mr-1 inline size-4 text-surface-400" />
-                  Total
-                </span>
-                <span className="font-heading text-lg font-bold text-surface-900">
-                  $1,752.00
-                </span>
-              </div>
+              {payment ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-surface-500">
+                      Transcription ({payment.transcribeDuration} min)
+                    </span>
+                    <span className="font-medium text-surface-800">
+                      {formatRupiah(payment.transcribePaymentAmount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-surface-500">Review fee (flat)</span>
+                    <span className="font-medium text-surface-800">
+                      {formatRupiah(payment.reviewPaymentAmount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-surface-100 pt-3">
+                    <span className="font-semibold text-surface-800">
+                      <FiDollarSign className="mr-1 inline size-4 text-surface-400" />
+                      Total
+                    </span>
+                    <span className="font-heading text-lg font-bold text-surface-900">
+                      {formatRupiah(payment.totalPayout)}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-surface-500">
+                  Payment is generated once the job is completed.
+                </p>
+              )}
             </CardBody>
           </Card>
         </div>

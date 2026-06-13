@@ -1,4 +1,9 @@
 @import 'tailwindcss';
+/* Only the modal component is used; pin to the light theme so DaisyUI never
+ * auto-switches the app to dark and clashes with the custom design system. */
+@plugin "daisyui" {
+  themes: light --default;
+}
 
 /* Scan the shared components package so Tailwind generates its classes (Tailwind v4) */
 @source '../../../packages/components/src/**/*.{ts,tsx}';

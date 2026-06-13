@@ -1,5 +1,3 @@
-'use client';
-
 import { clsx } from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -14,11 +12,21 @@ function isActive(pathname: string, href: string) {
 export function Sidebar({
   collapsed,
   onToggle,
+  jobCount
 }: {
   collapsed: boolean;
   onToggle: () => void;
+  jobCount: number;
 }) {
   const pathname = usePathname();
+
+  // assign job count to nav items
+  NAV_ITEMS.forEach((item) => {
+    if (item.href === '/jobs') {
+      item.badge = jobCount ? jobCount.toString() : "0"
+    }
+  });
+
 
   return (
     <aside

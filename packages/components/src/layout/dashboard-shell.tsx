@@ -9,7 +9,7 @@ import { Header } from './header';
  * App shell: owns the collapsed state shared between the sidebar and the
  * main column. Page content is passed as `children` and stays server-rendered.
  */
-export function DashboardShell({ children }: { children: ReactNode }) {
+export function DashboardShell({ children, jobCount }: { children: ReactNode, jobCount: number }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -17,6 +17,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed((v) => !v)}
+        jobCount={jobCount}
       />
       <div
         className={clsx(

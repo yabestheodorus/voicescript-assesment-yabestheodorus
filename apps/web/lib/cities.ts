@@ -7,7 +7,6 @@ export const INDONESIAN_CITIES = [
   'Surabaya',
   'Bandung',
   'Medan',
-  'Semarang',
   'Makassar',
   'Palembang',
   'Tangerang',

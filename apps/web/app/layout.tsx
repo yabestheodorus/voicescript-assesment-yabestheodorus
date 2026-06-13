@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { DashboardShell } from '@repo/components/layout/dashboard-shell';
+import { getJobCount } from '../lib/api';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -23,15 +24,18 @@ export const metadata: Metadata = {
   icons: { icon: '/favicon-192.png' },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  const jobCount = await getJobCount();
+
   return (
     <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
       <body>
-        <DashboardShell>{children}</DashboardShell>
+        <DashboardShell jobCount={jobCount.ok ? jobCount.data : 0}>{children}</DashboardShell>
       </body>
     </html>
   );

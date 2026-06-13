@@ -5,8 +5,10 @@
 import {
   reporterSchema,
   jobSchema,
+  jobDetailSchema,
   type Reporter,
   type Job,
+  type JobDetail,
   type CreateJobInput,
 } from '@repo/schema';
 
@@ -71,7 +73,7 @@ export async function getJobs(): Promise<ApiResult<Job[]>> {
   }
 }
 
-export async function getJob(id: string): Promise<ApiResult<Job>> {
+export async function getJob(id: string): Promise<ApiResult<JobDetail>> {
   try {
     const res = await fetch(`${API_BASE_URL}/jobs/${id}`, {
       cache: 'no-store',
@@ -82,7 +84,7 @@ export async function getJob(id: string): Promise<ApiResult<Job>> {
     if (!res.ok) {
       return { ok: false, error: `API responded ${res.status}` };
     }
-    const parsed = jobSchema.safeParse(await res.json());
+    const parsed = jobDetailSchema.safeParse(await res.json());
     if (!parsed.success) {
       return { ok: false, error: 'Unexpected response shape from /jobs/:id' };
     }
@@ -91,6 +93,103 @@ export async function getJob(id: string): Promise<ApiResult<Job>> {
     return {
       ok: false,
       error: `Could not reach the API at ${API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+export async function getJobCount(): Promise<ApiResult<number>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/jobs/count`, {
+      cache: 'no-store',
+    })
+    return { ok: true, data: await res.json() as number };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+/** POST /jobs/:id/assign-reporter — called from the browser (client component). */
+export async function assignReporter(
+  jobId: string,
+  reporterId: string,
+): Promise<ApiResult<Job>> {
+  try {
+    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/assign-reporter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reporterId }),
+    });
+
+    if (!res.ok) {
+      // Surface the API's validation / conflict message when present.
+      let error = `API responded ${res.status}`;
+      try {
+        const payload = await res.json();
+        if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+          error = payload.errors
+            .map((e: { path: string; message: string }) =>
+              e.path ? `${e.path}: ${e.message}` : e.message,
+            )
+            .join(', ');
+        } else if (typeof payload?.message === 'string') {
+          error = payload.message;
+        }
+      } catch {
+        // Non-JSON error body — keep the status-based message.
+      }
+      return { ok: false, error };
+    }
+
+    const parsed = jobSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: 'Unexpected response shape from assign-reporter' };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+/** POST /jobs/:id/finish-transcribe — called from the browser (client component). */
+export async function finishTranscribe(
+  jobId: string,
+  transcribedAt: string,
+): Promise<ApiResult<Job>> {
+  try {
+    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/finish-transcribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcribedAt }),
+    });
+
+    if (!res.ok) {
+      let error = `API responded ${res.status}`;
+      try {
+        const payload = await res.json();
+        if (typeof payload?.message === 'string') {
+          error = payload.message;
+        }
+      } catch {
+        // Non-JSON error body — keep the status-based message.
+      }
+      return { ok: false, error };
+    }
+
+    const parsed = jobSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: 'Unexpected response shape from finish-transcribe' };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
     };
   }
 }

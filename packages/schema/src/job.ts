@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { workingModeSchema, jobStatusSchema } from './enums';
 import { uuidSchema } from './common';
+import { reporterSchema } from './reporter';
+import { paymentSchema } from './payment';
 
 /** Full job entity (DB row shape). Timestamps accept ISO strings or Dates. */
 export const jobSchema = z.object({
@@ -23,6 +25,16 @@ export const jobSchema = z.object({
   editorId: uuidSchema.nullable(),
 });
 export type Job = z.infer<typeof jobSchema>;
+
+/**
+ * GET /jobs/:id response — the job plus its assigned reporter and payment
+ * snapshot (both null until assigned / completed). Used by the detail page.
+ */
+export const jobDetailSchema = jobSchema.extend({
+  reporter: reporterSchema.nullable(),
+  payment: paymentSchema.nullable(),
+});
+export type JobDetail = z.infer<typeof jobDetailSchema>;
 
 /** Shared fields for create/update — refined separately below. */
 const jobInputBase = z.object({
@@ -66,3 +78,9 @@ export const assignEditorSchema = z.object({
   editorId: uuidSchema,
 });
 export type AssignEditorInput = z.infer<typeof assignEditorSchema>;
+
+/** POST /jobs/:id/finish-transcribe body — operator enters when it finished. */
+export const finishTranscribeSchema = z.object({
+  transcribedAt: z.coerce.date(),
+});
+export type FinishTranscribeInput = z.infer<typeof finishTranscribeSchema>;
