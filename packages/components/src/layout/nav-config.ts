@@ -1,5 +1,4 @@
 import {
-  FiGrid,
   FiBriefcase,
   FiUsers,
   FiCreditCard,
@@ -15,7 +14,6 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', href: '/', icon: FiGrid },
   { label: 'Jobs', href: '/jobs', icon: FiBriefcase, badge: '12' },
   { label: 'Reporters', href: '/reporters', icon: FiUsers },
   { label: 'Payments', href: '/payments', icon: FiCreditCard, badge: '3' },

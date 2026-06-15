@@ -54,6 +54,16 @@ async function main() {
   const prisma = new PrismaClient({ adapter });
 
   try {
+    // Clear payments and jobs 
+    const { count: removedPayments } = await prisma.payment.deleteMany();
+    console.log(`Cleared ${removedPayments} existing payment(s).`);
+
+    await prisma.reporters.updateMany({ data: { currentJobId: null } });
+    await prisma.editor.updateMany({ data: { currentJobId: null } });
+
+    const { count: removedJobs } = await prisma.job.deleteMany();
+    console.log(`Cleared ${removedJobs} existing job(s).`);
+
     // Clear the reporters table before seeding.
     const { count: removedReporters } = await prisma.reporters.deleteMany();
     console.log(`Cleared ${removedReporters} existing reporter(s).`);

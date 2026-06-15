@@ -4,9 +4,7 @@ import { StatusBadge } from '@repo/components/ui/status-badge';
 import { Avatar } from '@repo/components/ui/avatar';
 import { Badge } from '@repo/components/ui/badge';
 import { Card, CardBody } from '@repo/components/ui/card';
-import { buttonClasses } from '@repo/components/ui/button';
 import {
-  FiPlus,
   FiMapPin,
   FiClock,
   FiArrowUpRight,
@@ -79,12 +77,6 @@ export default async function ReportersPage() {
           result.ok
             ? `${result.data.length} reporter${result.data.length === 1 ? '' : 's'} in your agency.`
             : 'Your court reporters, their availability, and rates.'
-        }
-        actions={
-          <button className={buttonClasses('primary')}>
-            <FiPlus className="size-4" />
-            Add reporter
-          </button>
         }
       />
 

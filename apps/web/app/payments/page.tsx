@@ -1,8 +1,10 @@
+import Link from 'next/link';
 import { PageHeader } from '@repo/components/ui/page-header';
 import { StatCard } from '@repo/components/ui/stat-card';
 import { StatusBadge } from '@repo/components/ui/status-badge';
 import { Avatar } from '@repo/components/ui/avatar';
-import { Button, buttonClasses } from '@repo/components/ui/button';
+import { Card, CardBody } from '@repo/components/ui/card';
+import { buttonClasses } from '@repo/components/ui/button';
 import {
   DataTable,
   THead,
@@ -16,139 +18,130 @@ import {
   FiClock,
   FiCheckCircle,
   FiAlertCircle,
-  FiFilter,
   FiSearch,
+  FiArrowUpRight,
 } from '@repo/components/icons';
+import type { PaymentListItem } from '@repo/schema';
+import { getPayments } from '../../lib/api';
 
-const STATS = [
-  {
-    label: 'Total Outstanding',
-    value: '$11,240',
-    icon: FiDollarSign,
-    hint: 'across 3 reporters',
-  },
-  {
-    label: 'Pending Payout',
-    value: '$6,180',
-    icon: FiClock,
-    hint: '2 awaiting approval',
-  },
-  {
-    label: 'Paid This Month',
-    value: '$48,920',
-    icon: FiCheckCircle,
-    delta: '11%',
-    trend: 'up' as const,
-    hint: '128 invoices',
-  },
-  {
-    label: 'Overdue',
-    value: '$2,400',
-    icon: FiAlertCircle,
-    hint: '1 invoice · 6 days',
-  },
-];
+// Always render fresh data from the database on each request.
+export const dynamic = 'force-dynamic';
 
-const PAYMENTS = [
-  {
-    id: 'PAY-5521',
-    reporter: 'Maria Solis',
-    job: 'JOB-2037 · Whitaker v. Meridian',
-    method: 'ACH',
-    due: 'Jun 14, 2026',
-    amount: '$1,752.00',
-    status: 'Pending',
-    payable: true,
-  },
-  {
-    id: 'PAY-5520',
-    reporter: 'James Okafor',
-    job: 'JOB-2036 · Coastal Freight',
-    method: 'ACH',
-    due: 'Jun 15, 2026',
-    amount: '$980.00',
-    status: 'Pending',
-    payable: true,
-  },
-  {
-    id: 'PAY-5519',
-    reporter: 'Daniel Cho',
-    job: 'JOB-2038 · Bayfront Holdings',
-    method: 'PayPal',
-    due: 'Jun 10, 2026',
-    amount: '$2,400.00',
-    status: 'Overdue',
-    payable: true,
-  },
-  {
-    id: 'PAY-5518',
-    reporter: 'Priya Nair',
-    job: 'JOB-2039 · Redmond Estate',
-    method: 'ACH',
-    due: 'Jun 18, 2026',
-    amount: '$3,448.00',
-    status: 'Processing',
-    payable: false,
-  },
-  {
-    id: 'PAY-5517',
-    reporter: 'Maria Solis',
-    job: 'JOB-2029 · Calloway v. Pinnacle',
-    method: 'ACH',
-    due: 'Jun 6, 2026',
-    amount: '$1,260.00',
-    status: 'Paid',
-    payable: false,
-  },
-  {
-    id: 'PAY-5516',
-    reporter: 'Aisha Rahman',
-    job: 'JOB-2018 · Garrison Patent',
-    method: 'Wire',
-    due: 'Jun 4, 2026',
-    amount: '$4,120.00',
-    status: 'Paid',
-    payable: false,
-  },
-  {
-    id: 'PAY-5515',
-    reporter: 'Thomas Becker',
-    job: 'JOB-2012 · Delgado Realty',
-    method: 'ACH',
-    due: 'Jul 1, 2026',
-    amount: '$640.00',
-    status: 'Draft',
-    payable: false,
-  },
-];
+const FILTERS = ['All', 'Pending', 'Paid'];
 
-const FILTERS = ['All', 'Pending', 'Processing', 'Overdue', 'Paid'];
+function formatRupiah(amount: number) {
+  return `Rp ${amount.toLocaleString('en-US')}`;
+}
 
-export default function PaymentsPage() {
+/**
+ * A payment row only exists once a job is reviewed. Its settlement state is
+ * derived from the job: REVIEWED is still awaiting payout, COMPLETED is paid.
+ */
+function paymentStatus(payment: PaymentListItem): 'Paid' | 'Pending' {
+  return payment.job.status === 'COMPLETED' ? 'Paid' : 'Pending';
+}
+
+function PaymentRow({ payment }: { payment: PaymentListItem }) {
+  const status = paymentStatus(payment);
+  return (
+    <TR>
+      <TD>
+        <Link
+          href={`/jobs/${payment.job.id}`}
+          className="font-medium text-surface-800 hover:text-brand-600"
+        >
+          {payment.job.caseName}
+        </Link>
+        <div className="text-xs text-surface-400">{payment.job.caseNumber}</div>
+      </TD>
+      <TD className="whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          <Avatar name={payment.reporter.name} size="sm" />
+          <span className="text-sm">{payment.reporter.name}</span>
+        </div>
+      </TD>
+      <TD className="text-sm text-surface-600">{payment.editor.name}</TD>
+      <TD className="text-right text-sm tabular-nums text-surface-600">
+        {formatRupiah(payment.transcribePaymentAmount)}
+      </TD>
+      <TD className="text-right text-sm tabular-nums text-surface-600">
+        {formatRupiah(payment.reviewPaymentAmount)}
+      </TD>
+      <TD className="text-right text-sm font-semibold tabular-nums text-surface-800">
+        {formatRupiah(payment.totalPayout)}
+      </TD>
+      <TD>
+        <StatusBadge status={status} />
+      </TD>
+      <TD className="text-right">
+        <Link
+          href={`/jobs/${payment.job.id}`}
+          className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700"
+        >
+          View <FiArrowUpRight className="size-3.5" />
+        </Link>
+      </TD>
+    </TR>
+  );
+}
+
+export default async function PaymentsPage() {
+  const result = await getPayments();
+  const payments = result.ok ? result.data : [];
+
+  const pending = payments.filter((p) => paymentStatus(p) === 'Pending');
+  const paid = payments.filter((p) => paymentStatus(p) === 'Paid');
+
+  const sum = (list: PaymentListItem[]) =>
+    list.reduce((total, p) => total + p.totalPayout, 0);
+
+  const stats = [
+    {
+      label: 'Total Payout',
+      value: formatRupiah(sum(payments)),
+      icon: FiDollarSign,
+      hint: `${payments.length} payment${payments.length === 1 ? '' : 's'}`,
+    },
+    {
+      label: 'Outstanding',
+      value: formatRupiah(sum(pending)),
+      icon: FiClock,
+      hint: `${pending.length} awaiting payout`,
+    },
+    {
+      label: 'Paid Out',
+      value: formatRupiah(sum(paid)),
+      icon: FiCheckCircle,
+      hint: `${paid.length} settled`,
+    },
+    {
+      label: 'Pending',
+      value: String(pending.length),
+      icon: FiAlertCircle,
+      hint: 'reporters awaiting payment',
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Payments"
         description="Monitor reporter payouts and execute payments."
         actions={
-          <>
-            <button className={buttonClasses('secondary')}>
-              <FiFilter className="size-4" />
-              Export
-            </button>
-            <button className={buttonClasses('primary')}>
-              <FiDollarSign className="size-4" />
-              Pay all pending
-            </button>
-          </>
+          <button className={buttonClasses('primary')}>
+            <FiDollarSign className="size-4" />
+            Pay all pending
+          </button>
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {STATS.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </div>
+      {result.ok ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
+          ))}
+        </div>
+      ) : null}
 
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -170,64 +163,61 @@ export default function PaymentsPage() {
           <FiSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-surface-400" />
           <input
             type="search"
-            placeholder="Search by reporter or invoice…"
+            placeholder="Search by reporter or matter…"
             className="h-9 w-full rounded-lg border border-surface-200 bg-surface-0 pl-9 pr-3 text-sm text-surface-700 placeholder:text-surface-400 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
         </div>
       </div>
 
-      <DataTable>
-        <THead>
-          <TR>
-            <TH>Invoice</TH>
-            <TH>Reporter</TH>
-            <TH>Method</TH>
-            <TH>Due</TH>
-            <TH className="text-right">Amount</TH>
-            <TH>Status</TH>
-            <TH className="text-right">Action</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {PAYMENTS.map((p) => (
-            <TR key={p.id}>
-              <TD>
-                <span className="font-medium text-surface-800">{p.id}</span>
-                <div className="text-xs text-surface-400">{p.job}</div>
-              </TD>
-              <TD className="whitespace-nowrap">
-                <div className="flex items-center gap-2">
-                  <Avatar name={p.reporter} size="sm" />
-                  <span className="text-sm">{p.reporter}</span>
-                </div>
-              </TD>
-              <TD className="text-sm text-surface-600">{p.method}</TD>
-              <TD className="whitespace-nowrap text-sm text-surface-500">
-                {p.due}
-              </TD>
-              <TD className="text-right text-sm font-semibold tabular-nums text-surface-800">
-                {p.amount}
-              </TD>
-              <TD>
-                <StatusBadge status={p.status} />
-              </TD>
-              <TD className="text-right">
-                {p.payable ? (
-                  <Button
-                    variant={p.status === 'Overdue' ? 'danger' : 'primary'}
-                    size="sm"
-                  >
-                    <FiDollarSign className="size-3.5" />
-                    Pay
-                  </Button>
-                ) : (
-                  <span className="text-xs text-surface-400">—</span>
-                )}
-              </TD>
+      {!result.ok ? (
+        <Card>
+          <CardBody className="flex items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-danger-50 text-danger-600">
+              <FiAlertCircle className="size-5" />
+            </span>
+            <div>
+              <p className="font-medium text-surface-800">
+                Couldn&apos;t load payments
+              </p>
+              <p className="mt-0.5 text-sm text-surface-500">{result.error}</p>
+            </div>
+          </CardBody>
+        </Card>
+      ) : payments.length === 0 ? (
+        <Card>
+          <CardBody className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-surface-100 text-surface-400">
+              <FiDollarSign className="size-6" />
+            </span>
+            <div>
+              <p className="font-medium text-surface-800">No payments yet</p>
+              <p className="mt-0.5 text-sm text-surface-500">
+                Payouts appear here once a job&apos;s review is completed.
+              </p>
+            </div>
+          </CardBody>
+        </Card>
+      ) : (
+        <DataTable>
+          <THead>
+            <TR>
+              <TH>Matter</TH>
+              <TH>Reporter</TH>
+              <TH>Editor</TH>
+              <TH className="text-right">Transcribe</TH>
+              <TH className="text-right">Review</TH>
+              <TH className="text-right">Total</TH>
+              <TH>Status</TH>
+              <TH className="text-right">Action</TH>
             </TR>
-          ))}
-        </TBody>
-      </DataTable>
+          </THead>
+          <TBody>
+            {payments.map((payment) => (
+              <PaymentRow key={payment.id} payment={payment} />
+            ))}
+          </TBody>
+        </DataTable>
+      )}
     </div>
   );
 }

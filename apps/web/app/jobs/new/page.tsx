@@ -110,7 +110,7 @@ const CreateNewJob = () => {
                         <input
                           type="text"
                           placeholder="Search city..."
-                          value={isCityOpen ? citySearch : field.state.value}
+                          value={isCityOpen ? citySearch : (field.state.value ?? '')}
                           onFocus={() => setIsCityOpen(true)}
                           onChange={(e) => {
                             setCitySearch(e.target.value);

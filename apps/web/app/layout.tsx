@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { DashboardShell } from '@repo/components/layout/dashboard-shell';
-import { getJobCount } from '../lib/api';
+import { getJobCount, getPaymentCount } from '../lib/api';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -30,12 +30,20 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const jobCount = await getJobCount();
+  const [jobCount, paymentCount] = await Promise.all([
+    getJobCount(),
+    getPaymentCount(),
+  ]);
 
   return (
     <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
       <body>
-        <DashboardShell jobCount={jobCount.ok ? jobCount.data : 0}>{children}</DashboardShell>
+        <DashboardShell
+          jobCount={jobCount.ok ? jobCount.data : 0}
+          paymentCount={paymentCount.ok ? paymentCount.data : 0}
+        >
+          {children}
+        </DashboardShell>
       </body>
     </html>
   );

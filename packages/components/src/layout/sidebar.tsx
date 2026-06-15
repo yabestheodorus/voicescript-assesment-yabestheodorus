@@ -12,18 +12,24 @@ function isActive(pathname: string, href: string) {
 export function Sidebar({
   collapsed,
   onToggle,
-  jobCount
+  jobCount,
+  paymentCount
 }: {
   collapsed: boolean;
   onToggle: () => void;
   jobCount: number;
+  paymentCount: number;
 }) {
   const pathname = usePathname();
 
-  // assign job count to nav items
+  // assign live counts to nav items
   NAV_ITEMS.forEach((item) => {
     if (item.href === '/jobs') {
       item.badge = jobCount ? jobCount.toString() : "0"
+    }
+    if (item.href === '/payments') {
+      // Only badge outstanding payouts; hide it when nothing is pending.
+      item.badge = paymentCount ? paymentCount.toString() : undefined
     }
   });
 

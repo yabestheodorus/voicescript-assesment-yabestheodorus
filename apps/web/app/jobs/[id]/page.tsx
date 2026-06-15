@@ -194,10 +194,7 @@ export default async function JobDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className={buttonClasses('secondary')}>
-            <FiEdit2 className="size-4" />
-            Edit
-          </button>
+
           <JobActionButton job={job} reporters={reporters} editors={editors} />
         </div>
       </div>

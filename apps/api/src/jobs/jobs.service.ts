@@ -56,7 +56,9 @@ export class JobsService {
   }
 
   getJobsCount() {
-    return this.prismaService.job.count();
+    return this.prismaService.job.count({
+      where: { status: { not: 'COMPLETED' } }
+    });
   }
 
 

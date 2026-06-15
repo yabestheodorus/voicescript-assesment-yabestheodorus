@@ -7,10 +7,12 @@ import {
   editorSchema,
   jobSchema,
   jobDetailSchema,
+  paymentListItemSchema,
   type Reporter,
   type Editor,
   type Job,
   type JobDetail,
+  type PaymentListItem,
   type CreateJobInput,
 } from '@repo/schema';
 
@@ -89,6 +91,43 @@ export async function getJobs(): Promise<ApiResult<Job[]>> {
       return { ok: false, error: 'Unexpected response shape from /jobs' };
     }
     return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+export async function getPayments(): Promise<ApiResult<PaymentListItem[]>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/payments`, {
+      // Always reflect the live database for this dashboard view.
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      return { ok: false, error: `API responded ${res.status}` };
+    }
+    const parsed = paymentListItemSchema.array().safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: 'Unexpected response shape from /payments' };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+/** GET /payments/count — outstanding payouts, for the sidebar badge. */
+export async function getPaymentCount(): Promise<ApiResult<number>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/payments/count`, {
+      cache: 'no-store',
+    });
+    return { ok: true, data: await res.json() as number };
   } catch {
     return {
       ok: false,

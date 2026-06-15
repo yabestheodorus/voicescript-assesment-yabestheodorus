@@ -5,6 +5,7 @@ import { CommonModule } from './common/common.module';
 import { ReportersModule } from './reporters/reporters.module';
 import { EditorsModule } from './editors/editors.module';
 import { JobsModule } from './jobs/jobs.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { JobsModule } from './jobs/jobs.module';
     ReportersModule,
     EditorsModule,
     JobsModule,
+    PaymentsModule,
   ],
   controllers: [],
   providers: [],

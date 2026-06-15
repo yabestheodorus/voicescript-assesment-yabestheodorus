@@ -26,7 +26,17 @@ import { jobStatusDisplay } from '../../lib/job-status';
 // Always render fresh data from the database on each request.
 export const dynamic = 'force-dynamic';
 
-const FILTERS = ['Semua', 'Terjadwal', 'Berlangsung', 'Transkripsi', 'Tinjauan', 'Terkirim'];
+
+const FILTERS = [
+  'All',
+  'New',
+  'Assigned',
+  'Transcribing',
+  'Awaiting review',
+  'Reviewing',
+  'Reviewed',
+  'Completed',
+] as const;
 
 function formatDate(value: Date) {
   return value.toLocaleDateString('en-GB', {
@@ -75,24 +85,37 @@ function JobRow({ job }: { job: Job }) {
   );
 }
 
-export default async function JobsPage() {
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const result = await getJobs();
+
+  // Active tab from the URL; anything unrecognised falls back to 'All'.
+  const requested = (await searchParams).status;
+  const active = FILTERS.find((f) => f === requested) ?? 'All';
+
+  const jobs = result.ok ? result.data : [];
+  const filtered =
+    active === 'All'
+      ? jobs
+      : jobs.filter((job) => jobStatusDisplay(job).label === active);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Jobs"
         description={
-          result.ok
-            ? `${result.data.length} job${result.data.length === 1 ? '' : 's'} tracked.`
-            : 'Manage and track every reporting assignment.'
+          !result.ok
+            ? 'Manage and track every reporting assignment.'
+            : active === 'All'
+              ? `${jobs.length} job${jobs.length === 1 ? '' : 's'} tracked.`
+              : `${filtered.length} ${active.toLowerCase()} job${filtered.length === 1 ? '' : 's'}.`
         }
         actions={
           <>
-            <button className={buttonClasses('secondary')}>
-              <FiFilter className="size-4" />
-              Export
-            </button>
+
             <Link href={"/jobs/new"} className={buttonClasses('primary')}>
               <FiPlus className="size-4" />
               New job
@@ -104,17 +127,18 @@ export default async function JobsPage() {
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-1.5">
-          {FILTERS.map((f, i) => (
-            <button
+          {FILTERS.map((f) => (
+            <Link
               key={f}
+              href={f === 'All' ? '/jobs' : `/jobs?status=${encodeURIComponent(f)}`}
               className={
-                i === 0
+                f === active
                   ? 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white'
                   : 'rounded-lg px-3 py-1.5 text-sm font-medium text-surface-500 hover:bg-surface-100 hover:text-surface-800'
               }
             >
               {f}
-            </button>
+            </Link>
           ))}
         </div>
         <div className="relative sm:w-72">
@@ -139,7 +163,7 @@ export default async function JobsPage() {
             </div>
           </CardBody>
         </Card>
-      ) : result.data.length === 0 ? (
+      ) : jobs.length === 0 ? (
         <Card>
           <CardBody className="flex flex-col items-center gap-3 py-12 text-center">
             <span className="flex size-12 items-center justify-center rounded-full bg-surface-100 text-surface-400">
@@ -149,6 +173,22 @@ export default async function JobsPage() {
               <p className="font-medium text-surface-800">No jobs yet</p>
               <p className="mt-0.5 text-sm text-surface-500">
                 Create your first reporting assignment to get started.
+              </p>
+            </div>
+          </CardBody>
+        </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardBody className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-surface-100 text-surface-400">
+              <FiBriefcase className="size-6" />
+            </span>
+            <div>
+              <p className="font-medium text-surface-800">
+                No {active.toLowerCase()} jobs
+              </p>
+              <p className="mt-0.5 text-sm text-surface-500">
+                Nothing matches this filter right now.
               </p>
             </div>
           </CardBody>
@@ -166,7 +206,7 @@ export default async function JobsPage() {
             </TR>
           </THead>
           <TBody>
-            {result.data.map((job) => (
+            {filtered.map((job) => (
               <JobRow key={job.id} job={job} />
             ))}
           </TBody>
