@@ -1,124 +1,74 @@
-# Turborepo starter
+# VoiceScript — Court Reporting Workflow Manager
 
-This is a community-maintained example. If you experience a problem, please submit a pull request with a fix. GitHub Issues will be closed.
+Manage transcription jobs end to end: assign reporters, assign editors, track
+status, and calculate payouts.
 
-## Using this example
+**Stack:** Next.js (web) · NestJS (api) · PostgreSQL · Prisma · Turborepo
 
-Run the following command:
+---
 
-```bash
-npx create-turbo@latest -e with-nestjs
-```
+## Run it locally
 
-## What's inside?
-
-This Turborepo includes the following packages & apps:
-
-### Apps and Packages
-
-```shell
-.
-├── apps
-│   ├── api                       # NestJS app (https://nestjs.com).
-│   └── web                       # Next.js app (https://nextjs.org).
-└── packages
-    ├── @repo/api                 # Shared `NestJS` resources.
-    ├── @repo/eslint-config       # `eslint` configurations (includes `prettier`)
-    ├── @repo/jest-config         # `jest` configurations
-    ├── @repo/typescript-config   # `tsconfig.json`s used throughout the monorepo
-    └── @repo/ui                  # Shareable stub React component library.
-```
-
-Each package and application are mostly written in [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This `Turborepo` has some additional tools already set for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type-safety
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-- [Jest](https://prettier.io) & [Playwright](https://playwright.dev/) for testing
-
-### Commands
-
-This `Turborepo` already configured useful commands for all your apps and packages.
-
-#### Build
+Prerequisites: **Node 18+** and **Docker**.
 
 ```bash
-# Will build all the app & packages with the supported `build` script.
-npm run build
+# 1. Start PostgreSQL (creds are baked into docker-compose.yml + apps/api/.env)
+docker compose up -d
 
-# ℹ️ If you plan to only build apps individually,
-# Please make sure you've built the packages first.
+# 2. Install all workspaces
+npm install
+
+# 3. Generate the Prisma client and apply migrations
+cd apps/api
+npx prisma generate
+npx prisma migrate deploy
+
+# 4. Seed reporters & editors
+npm run db:seed
+
+# 5. Start everything (from the repo root)
+cd ../..
+npm run dev    # turbo dev
 ```
 
-#### Develop
+| App | URL |
+| --- | --- |
+| Web | http://localhost:3001 |
+| API | http://localhost:3000/api |
 
-```bash
-# Will run the development server for all the app & packages with the supported `dev` script.
-npm run dev
-```
+---
 
-#### test
+## Workflow: create → completed
 
-```bash
-# Will launch a test suites for all the app & packages with the supported `test` script.
-npm run test
+A job moves through `NEW → ASSIGNED → TRANSCRIBED → REVIEWED → COMPLETED`. Each
+step below is an action on the job detail page.
 
-# You can launch e2e testes with `test:e2e`
-npm run test:e2e
+**1. Create a job** — case name, working mode (remote/physical), and city.
+Status starts at `NEW`.
 
-# See `@repo/jest-config` to customize the behavior.
-```
+![Create a job](docs/screenshots/01-create-job.png)
 
-#### Lint
+**2. Assign a reporter** — physical jobs match the reporter's city; remote jobs
+are unrestricted. Status → `ASSIGNED`.
 
-```bash
-# Will lint all the app & packages with the supported `lint` script.
-# See `@repo/eslint-config` to customize the behavior.
-npm run lint
-```
+![Assign a reporter](docs/screenshots/02-assign-reporter.png)
 
-#### Format
+**3. Start & finish transcription** — start the billable window, then enter the
+finish time. Duration (minutes) is computed from the window. Status →
+`TRANSCRIBED`.
 
-```bash
-# Will format all the supported `.ts,.js,json,.tsx,.jsx` files.
-# See `@repo/eslint-config/prettier-base.js` to customize the behavior.
-npm format
-```
+![Transcription](docs/screenshots/03-transcribe.png)
 
-### Remote Caching
+**4. Assign an editor & finish review** — an editor reviews the transcript. On
+finish, the payment is calculated and snapshotted. Status → `REVIEWED`.
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+![Review](docs/screenshots/04-review.png)
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+**5. Pay** — settle the payout. Status → `COMPLETED`.
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+![Pay](docs/screenshots/05-pay.png)
 
-```bash
-npx turbo login
-```
+**Payouts** — every settled and pending payment, with per-job earnings
+(`reporter rate × minutes + editor flat fee`).
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```bash
-npx turbo link
-```
-
-## Useful Links
-
-This example take some inspiration the [with-nextjs](https://github.com/vercel/turborepo/tree/main/examples/with-nextjs) `Turbo` example and [01-cats-app](https://github.com/nestjs/nest/tree/master/sample/01-cats-app) `NestJs` sample.
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+![Payments](docs/screenshots/06-payments.png)
