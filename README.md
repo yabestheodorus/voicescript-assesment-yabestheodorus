@@ -18,15 +18,18 @@ docker compose up -d
 # 2. Install all workspaces
 npm install
 
-# 3. Generate the Prisma client and apply migrations
+# 3. Set up the API env (values match docker-compose.yml — works as-is)
+cp apps/api/.env.example apps/api/.env
+
+# 4. Generate the Prisma client and apply migrations
 cd apps/api
 npx prisma generate
 npx prisma migrate deploy
 
-# 4. Seed reporters & editors
+# 5. Seed reporters & editors
 npm run db:seed
 
-# 5. Start everything (from the repo root)
+# 6. Start everything (from the repo root)
 cd ../..
 npm run dev    # turbo dev
 ```

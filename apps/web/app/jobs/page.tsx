@@ -14,7 +14,6 @@ import {
 import {
   FiPlus,
   FiSearch,
-  FiFilter,
   FiArrowUpRight,
   FiAlertCircle,
   FiBriefcase,

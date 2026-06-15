@@ -1,7 +1,7 @@
 import { clsx } from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_ITEMS } from './nav-config';
+import { NAV_ITEMS, type NavItem } from './nav-config';
 import { FiChevronsLeft, FiHeadphones } from '../icons';
 
 function isActive(pathname: string, href: string) {
@@ -22,16 +22,13 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
 
-  // assign live counts to nav items
-  NAV_ITEMS.forEach((item) => {
-    if (item.href === '/jobs') {
-      item.badge = jobCount ? jobCount.toString() : "0"
-    }
-    if (item.href === '/payments') {
-      // Only badge outstanding payouts; hide it when nothing is pending.
-      item.badge = paymentCount ? paymentCount.toString() : undefined
-    }
-  });
+
+  function badgeFor(item: NavItem): string | undefined {
+    if (item.href === '/jobs') return jobCount ? jobCount.toString() : '0';
+    // Only badge outstanding payouts; hide it when nothing is pending.
+    if (item.href === '/payments') return paymentCount ? paymentCount.toString() : undefined;
+    return item.badge;
+  }
 
 
   return (
@@ -74,6 +71,7 @@ export function Sidebar({
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
+          const badge = badgeFor(item);
           return (
             <Link
               key={item.href}
@@ -96,7 +94,7 @@ export function Sidebar({
               {!collapsed ? (
                 <>
                   <span className="flex-1">{item.label}</span>
-                  {item.badge ? (
+                  {badge ? (
                     <span
                       className={clsx(
                         'rounded-full px-2 py-0.5 text-xs font-semibold',
@@ -105,7 +103,7 @@ export function Sidebar({
                           : 'bg-surface-100 text-surface-500',
                       )}
                     >
-                      {item.badge}
+                      {badge}
                     </span>
                   ) : null}
                 </>

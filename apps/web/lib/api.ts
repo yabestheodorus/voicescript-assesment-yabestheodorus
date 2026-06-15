@@ -174,272 +174,102 @@ export async function getJobCount(): Promise<ApiResult<number>> {
   }
 }
 
-/** POST /jobs/:id/assign-reporter — called from the browser (client component). */
-export async function assignReporter(
+
+async function extractApiError(res: Response): Promise<string> {
+  let error = `API responded ${res.status}`;
+  try {
+    const payload = await res.json();
+    if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+      error = payload.errors
+        .map((e: { path: string; message: string }) =>
+          e.path ? `${e.path}: ${e.message}` : e.message,
+        )
+        .join(', ');
+    } else if (typeof payload?.message === 'string') {
+      error = payload.message;
+    }
+  } catch {
+    // Non-JSON error body — keep the status-based message.
+  }
+  return error;
+}
+
+
+async function postJobAction(
+  path: string,
+  body?: unknown,
+): Promise<ApiResult<Job>> {
+  try {
+    const res = await fetch(`${BROWSER_API_BASE_URL}${path}`, {
+      method: 'POST',
+      ...(body !== undefined && {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    });
+
+    if (!res.ok) {
+      return { ok: false, error: await extractApiError(res) };
+    }
+
+    const parsed = jobSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      return { ok: false, error: `Unexpected response shape from POST ${path}` };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return {
+      ok: false,
+      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
+    };
+  }
+}
+
+
+export function assignReporter(
   jobId: string,
   reporterId: string,
 ): Promise<ApiResult<Job>> {
-  try {
-    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/assign-reporter`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reporterId }),
-    });
-
-    if (!res.ok) {
-      // Surface the API's validation / conflict message when present.
-      let error = `API responded ${res.status}`;
-      try {
-        const payload = await res.json();
-        if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
-          error = payload.errors
-            .map((e: { path: string; message: string }) =>
-              e.path ? `${e.path}: ${e.message}` : e.message,
-            )
-            .join(', ');
-        } else if (typeof payload?.message === 'string') {
-          error = payload.message;
-        }
-      } catch {
-        // Non-JSON error body — keep the status-based message.
-      }
-      return { ok: false, error };
-    }
-
-    const parsed = jobSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      return { ok: false, error: 'Unexpected response shape from assign-reporter' };
-    }
-    return { ok: true, data: parsed.data };
-  } catch {
-    return {
-      ok: false,
-      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
-    };
-  }
+  return postJobAction(`/jobs/${jobId}/assign-reporter`, { reporterId });
 }
 
-/** POST /jobs/:id/start-transcribe — called from the browser (client component). */
-export async function startTranscribe(jobId: string): Promise<ApiResult<Job>> {
-  try {
-    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/start-transcribe`, {
-      method: 'POST',
-    });
 
-    if (!res.ok) {
-      let error = `API responded ${res.status}`;
-      try {
-        const payload = await res.json();
-        if (typeof payload?.message === 'string') {
-          error = payload.message;
-        }
-      } catch {
-        // Non-JSON error body — keep the status-based message.
-      }
-      return { ok: false, error };
-    }
 
-    const parsed = jobSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      return { ok: false, error: 'Unexpected response shape from start-transcribe' };
-    }
-    return { ok: true, data: parsed.data };
-  } catch {
-    return {
-      ok: false,
-      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
-    };
-  }
+export function startTranscribe(jobId: string): Promise<ApiResult<Job>> {
+  return postJobAction(`/jobs/${jobId}/start-transcribe`);
 }
 
-/** POST /jobs/:id/finish-transcribe — called from the browser (client component). */
-export async function finishTranscribe(
+
+
+export function finishTranscribe(
   jobId: string,
   transcribedAt: string,
 ): Promise<ApiResult<Job>> {
-  try {
-    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/finish-transcribe`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transcribedAt }),
-    });
-
-    if (!res.ok) {
-      let error = `API responded ${res.status}`;
-      try {
-        const payload = await res.json();
-        if (typeof payload?.message === 'string') {
-          error = payload.message;
-        }
-      } catch {
-        // Non-JSON error body — keep the status-based message.
-      }
-      return { ok: false, error };
-    }
-
-    const parsed = jobSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      return { ok: false, error: 'Unexpected response shape from finish-transcribe' };
-    }
-    return { ok: true, data: parsed.data };
-  } catch {
-    return {
-      ok: false,
-      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
-    };
-  }
+  return postJobAction(`/jobs/${jobId}/finish-transcribe`, { transcribedAt });
 }
 
-/** POST /jobs/:id/assign-editor — called from the browser (client component). */
-export async function assignEditor(
+
+
+export function assignEditor(
   jobId: string,
   editorId: string,
 ): Promise<ApiResult<Job>> {
-  try {
-    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/assign-editor`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ editorId }),
-    });
-
-    if (!res.ok) {
-      let error = `API responded ${res.status}`;
-      try {
-        const payload = await res.json();
-        if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
-          error = payload.errors
-            .map((e: { path: string; message: string }) =>
-              e.path ? `${e.path}: ${e.message}` : e.message,
-            )
-            .join(', ');
-        } else if (typeof payload?.message === 'string') {
-          error = payload.message;
-        }
-      } catch {
-        // Non-JSON error body — keep the status-based message.
-      }
-      return { ok: false, error };
-    }
-
-    const parsed = jobSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      return { ok: false, error: 'Unexpected response shape from assign-editor' };
-    }
-    return { ok: true, data: parsed.data };
-  } catch {
-    return {
-      ok: false,
-      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
-    };
-  }
+  return postJobAction(`/jobs/${jobId}/assign-editor`, { editorId });
 }
 
-/** POST /jobs/:id/finish-review — called from the browser (client component). */
-export async function finishReview(jobId: string): Promise<ApiResult<Job>> {
-  try {
-    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/finish-review`, {
-      method: 'POST',
-    });
 
-    if (!res.ok) {
-      let error = `API responded ${res.status}`;
-      try {
-        const payload = await res.json();
-        if (typeof payload?.message === 'string') {
-          error = payload.message;
-        }
-      } catch {
-        // Non-JSON error body — keep the status-based message.
-      }
-      return { ok: false, error };
-    }
 
-    const parsed = jobSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      return { ok: false, error: 'Unexpected response shape from finish-review' };
-    }
-    return { ok: true, data: parsed.data };
-  } catch {
-    return {
-      ok: false,
-      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
-    };
-  }
+export function finishReview(jobId: string): Promise<ApiResult<Job>> {
+  return postJobAction(`/jobs/${jobId}/finish-review`);
 }
 
-/** POST /jobs/:id/pay — marks a reviewed job as done. Called from the browser. */
-export async function payJob(jobId: string): Promise<ApiResult<Job>> {
-  try {
-    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs/${jobId}/pay`, {
-      method: 'POST',
-    });
 
-    if (!res.ok) {
-      let error = `API responded ${res.status}`;
-      try {
-        const payload = await res.json();
-        if (typeof payload?.message === 'string') {
-          error = payload.message;
-        }
-      } catch {
-        // Non-JSON error body — keep the status-based message.
-      }
-      return { ok: false, error };
-    }
 
-    const parsed = jobSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      return { ok: false, error: 'Unexpected response shape from pay' };
-    }
-    return { ok: true, data: parsed.data };
-  } catch {
-    return {
-      ok: false,
-      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
-    };
-  }
+export function payJob(jobId: string): Promise<ApiResult<Job>> {
+  return postJobAction(`/jobs/${jobId}/pay`);
 }
 
-/** POST /jobs — called from the browser (client component). */
-export async function createJob(
-  input: CreateJobInput,
-): Promise<ApiResult<Job>> {
-  try {
-    const res = await fetch(`${BROWSER_API_BASE_URL}/jobs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
 
-    if (!res.ok) {
-      // Surface the API's Zod validation errors when present.
-      let error = `API responded ${res.status}`;
-      try {
-        const payload = await res.json();
-        if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
-          error = payload.errors
-            .map((e: { path: string; message: string }) =>
-              e.path ? `${e.path}: ${e.message}` : e.message,
-            )
-            .join(', ');
-        } else if (typeof payload?.message === 'string') {
-          error = payload.message;
-        }
-      } catch {
-        // Non-JSON error body — keep the status-based message.
-      }
-      return { ok: false, error };
-    }
-
-    const parsed = jobSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      return { ok: false, error: 'Unexpected response shape from POST /jobs' };
-    }
-    return { ok: true, data: parsed.data };
-  } catch {
-    return {
-      ok: false,
-      error: `Could not reach the API at ${BROWSER_API_BASE_URL}. Is it running?`,
-    };
-  }
+export function createJob(input: CreateJobInput): Promise<ApiResult<Job>> {
+  return postJobAction('/jobs', input);
 }

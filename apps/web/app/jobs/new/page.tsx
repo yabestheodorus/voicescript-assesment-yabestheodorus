@@ -2,13 +2,11 @@
 import { PageHeader } from '@repo/components/ui/page-header'
 import React from 'react'
 import {
-  FiPlus,
-  FiFilter,
   FiArrowRight,
   FiSearch,
 } from '@repo/components/icons';
 import { useForm } from '@tanstack/react-form';
-import { CreateJobInput, createJobSchema } from '@repo/schema';
+import { CreateJobInput, createJobSchema, WorkingMode } from '@repo/schema';
 import { TextField } from '@repo/components/ui/form-fields';
 import { buttonClasses } from '@repo/components/ui/button';
 import Link from 'next/link';
@@ -43,10 +41,6 @@ const CreateNewJob = () => {
     defaultValues,
     validators: { onChange: createJobSchema },
     onSubmit: ({ value }) => onSubmit?.(value),
-    onSubmitInvalid: ({ formApi }) => {
-      console.log(formApi.state.errorMap)
-      console.log(formApi.state.errors)
-    }
   })
 
   return (
@@ -80,14 +74,14 @@ const CreateNewJob = () => {
             <form.Field name="location">
               {(field) => (
                 <div className="flex gap-4">
-                  {['remote', 'physical'].map((mode) => (
+                  {(['remote', 'physical'] as WorkingMode[]).map((mode) => (
                     <label key={mode} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-surface-200 p-3 text-sm font-medium capitalize transition hover:bg-surface-50 has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:text-brand-700">
                       <input
                         type="radio"
                         name={field.name}
                         value={mode}
                         checked={field.state.value === mode}
-                        onChange={() => field.handleChange(mode as any)}
+                        onChange={() => field.handleChange(mode)}
                         className="sr-only"
                       />
                       {mode}

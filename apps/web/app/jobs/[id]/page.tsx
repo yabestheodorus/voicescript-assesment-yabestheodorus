@@ -18,7 +18,6 @@ import { buttonClasses } from '@repo/components/ui/button';
 import {
   FiArrowLeft,
   FiDownload,
-  FiEdit2,
   FiCalendar,
   FiMapPin,
   FiFileText,
@@ -233,21 +232,18 @@ export default async function JobDetailPage({
           <Card>
             <CardHeader
               title="Files & exhibits"
-              description={`${FILES.length} attachments`}
-              action={
-                <button className="text-sm font-medium text-brand-600 hover:text-brand-700">
-                  Upload
-                </button>
-              }
+              description="Placeholder — file storage isn't wired up yet"
+              action={<Badge tone="neutral">Coming soon</Badge>}
             />
             <CardBody className="space-y-2">
+              {/* Disabled preview: sample rows with no real upload/download yet. */}
               {FILES.map((file) => (
                 <div
                   key={file.name}
-                  className="flex items-center justify-between rounded-lg border border-surface-100 px-3 py-2.5 transition-colors hover:bg-surface-50"
+                  className="flex items-center justify-between rounded-lg border border-surface-100 px-3 py-2.5 opacity-60"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-100 text-surface-400">
                       <FiFileText className="size-4" />
                     </span>
                     <div className="min-w-0">
@@ -259,8 +255,10 @@ export default async function JobDetailPage({
                   <div className="flex items-center gap-3">
                     <Badge tone="neutral">{file.kind}</Badge>
                     <button
-                      className="text-surface-400 hover:text-brand-600"
+                      disabled
+                      className="cursor-not-allowed text-surface-300"
                       aria-label="Download file"
+                      title="File downloads aren't available yet"
                     >
                       <FiDownload className="size-4" />
                     </button>
